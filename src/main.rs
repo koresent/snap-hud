@@ -1,6 +1,5 @@
 use gtk4::cairo;
 use gtk4::gdk::Key;
-use gtk4::gio::ApplicationFlags;
 use gtk4::prelude::*;
 use gtk4::{
     Align, Application, ApplicationWindow, Box as GtkBox, Button, CssProvider, DrawingArea,
@@ -272,11 +271,15 @@ fn main() {
 
     let app = Application::builder()
         .application_id(APP_ID)
-        .flags(ApplicationFlags::NON_UNIQUE)
         .build();
 
     let sel_activate = Rc::clone(&selection);
     app.connect_activate(move |app| {
+        if let Some(window) = app.windows().first() {
+            window.present();
+            return;
+        }
+
         load_css();
 
         let window = ApplicationWindow::builder()
