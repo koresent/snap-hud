@@ -79,20 +79,23 @@ window.background.snap-hud-window {
 "#;
 
 #[derive(Clone, Copy)]
-enum ModeIcon {
+pub enum ModeIcon {
     Area,
     Window,
     Screen,
+    Ruler,
+    Picker,
+    Scanner,
 }
 
-struct ModeSpec {
-    id: &'static str,
-    key_hint: &'static str,
-    icon: ModeIcon,
-    title: &'static str,
+pub struct ModeSpec {
+    pub id: &'static str,
+    pub key_hint: &'static str,
+    pub icon: ModeIcon,
+    pub title: &'static str,
 }
 
-const MODES: &[ModeSpec] = &[
+pub const SCREENSHOT_MODES: &[ModeSpec] = &[
     ModeSpec {
         id: "area",
         key_hint: "1",
@@ -112,6 +115,53 @@ const MODES: &[ModeSpec] = &[
         title: "Screen",
     },
 ];
+
+pub const ALL_MODES: &[ModeSpec] = &[
+    ModeSpec {
+        id: "area",
+        key_hint: "1",
+        icon: ModeIcon::Area,
+        title: "Area",
+    },
+    ModeSpec {
+        id: "window",
+        key_hint: "2",
+        icon: ModeIcon::Window,
+        title: "Window",
+    },
+    ModeSpec {
+        id: "screen",
+        key_hint: "3",
+        icon: ModeIcon::Screen,
+        title: "Screen",
+    },
+    ModeSpec {
+        id: "ruler",
+        key_hint: "4",
+        icon: ModeIcon::Ruler,
+        title: "Ruler",
+    },
+    ModeSpec {
+        id: "picker",
+        key_hint: "5",
+        icon: ModeIcon::Picker,
+        title: "Picker",
+    },
+    ModeSpec {
+        id: "scanner",
+        key_hint: "6",
+        icon: ModeIcon::Scanner,
+        title: "Scanner",
+    },
+];
+
+pub fn modes_for(pretty: bool) -> &'static [ModeSpec] {
+    if pretty {
+        SCREENSHOT_MODES
+    } else {
+        ALL_MODES
+    }
+}
 
 fn load_css() {
     let provider = CssProvider::new();
@@ -181,10 +231,64 @@ fn draw_mode_icon(cr: &cairo::Context, kind: ModeIcon) {
             cr.line_to(15.0, 18.8);
             let _ = cr.stroke();
         }
+        ModeIcon::Ruler => {
+            cr.set_source_rgb(0.722, 0.733, 0.149);
+            draw_rounded_rect(cr, 2.5, 6.5, 17.0, 9.5, 2.0);
+            let _ = cr.stroke();
+
+            cr.set_source_rgb(0.984, 0.741, 0.184);
+            for x in [6.0, 12.0] {
+                cr.move_to(x, 6.5);
+                cr.line_to(x, 10.0);
+                let _ = cr.stroke();
+            }
+            for x in [9.0, 15.0] {
+                cr.move_to(x, 6.5);
+                cr.line_to(x, 12.0);
+                let _ = cr.stroke();
+            }
+        }
+        ModeIcon::Picker => {
+            cr.set_source_rgb(0.984, 0.741, 0.184);
+            cr.arc(15.5, 6.5, 2.3, 0.0, 2.0 * PI);
+            let _ = cr.fill();
+
+            cr.set_source_rgb(0.722, 0.733, 0.149);
+            cr.move_to(14.0, 8.0);
+            cr.line_to(7.5, 14.5);
+            let _ = cr.stroke();
+
+            cr.move_to(7.5, 14.5);
+            cr.line_to(4.5, 17.5);
+            let _ = cr.stroke();
+
+            cr.move_to(6.5, 13.5);
+            cr.line_to(8.5, 15.5);
+            let _ = cr.stroke();
+
+            cr.set_source_rgb(0.984, 0.741, 0.184);
+            cr.arc(3.5, 18.5, 0.9, 0.0, 2.0 * PI);
+            let _ = cr.fill();
+        }
+        ModeIcon::Scanner => {
+            cr.set_source_rgb(0.722, 0.733, 0.149);
+            for (x, w) in [(4.5, 1.4), (8.0, 2.2), (12.0, 1.4), (15.5, 2.2), (18.5, 1.2)] {
+                cr.set_line_width(w);
+                cr.move_to(x, 4.0);
+                cr.line_to(x, 18.0);
+                let _ = cr.stroke();
+            }
+
+            cr.set_source_rgb(0.984, 0.741, 0.184);
+            cr.set_line_width(1.8);
+            cr.move_to(2.0, 11.0);
+            cr.line_to(20.0, 11.0);
+            let _ = cr.stroke();
+        }
     }
 }
 
-pub fn mode_from_key(key: Key) -> Option<Option<&'static str>> {
+pub fn mode_from_key(key: Key, pretty: bool) -> Option<Option<&'static str>> {
     match key {
         Key::Escape | Key::q | Key::Q | Key::Cyrillic_shorti | Key::Cyrillic_SHORTI => {
             Some(None)
@@ -201,6 +305,30 @@ pub fn mode_from_key(key: Key) -> Option<Option<&'static str>> {
         | Key::S
         | Key::Cyrillic_yeru
         | Key::Cyrillic_YERU => Some(Some("screen")),
+        _ if pretty => None,
+        Key::_4 | Key::KP_4 | Key::r | Key::R | Key::Cyrillic_er | Key::Cyrillic_ER => {
+            Some(Some("ruler"))
+        }
+        Key::_5
+        | Key::KP_5
+        | Key::c
+        | Key::C
+        | Key::p
+        | Key::P
+        | Key::Cyrillic_es
+        | Key::Cyrillic_ES
+        | Key::Cyrillic_pe
+        | Key::Cyrillic_PE => Some(Some("picker")),
+        Key::_6
+        | Key::KP_6
+        | Key::b
+        | Key::B
+        | Key::x
+        | Key::X
+        | Key::Cyrillic_i
+        | Key::Cyrillic_I
+        | Key::Cyrillic_be
+        | Key::Cyrillic_BE => Some(Some("scanner")),
         _ => None,
     }
 }
@@ -294,7 +422,7 @@ fn main() {
         pill.add_css_class("hud-pill");
 
         let mut first_btn: Option<Button> = None;
-        for spec in MODES {
+        for spec in modes_for(pretty) {
             let btn = build_mode_button(
                 spec,
                 Rc::clone(&sel_activate),
@@ -327,7 +455,7 @@ fn main() {
         let win_key = window.clone();
         let app_key = app.clone();
         key_ctrl.connect_key_pressed(move |_, key, _, _| {
-            match mode_from_key(key) {
+            match mode_from_key(key, pretty) {
                 Some(maybe_mode) => {
                     finish_with_mode(&sel_key, &win_key, &app_key, maybe_mode);
                     gtk4::glib::Propagation::Stop
@@ -357,56 +485,112 @@ fn main() {
         std::thread::sleep(Duration::from_millis(60));
     }
 
-    let capture_bin = std::env::var("HOME")
-        .map(|h| format!("{h}/.local/bin/snap-capture"))
-        .unwrap_or_else(|_| "snap-capture".to_string());
+    match mode {
+        "ruler" => {
+            let mut cmd = Command::new("pixelkit");
+            cmd.arg("screen-ruler");
+            let err = cmd.exec();
+            eprintln!("snap-hud: failed to exec pixelkit screen-ruler: {err}");
+            std::process::exit(1);
+        }
+        "picker" => {
+            let mut cmd = Command::new("pixelkit");
+            cmd.arg("color-picker");
+            let err = cmd.exec();
+            eprintln!("snap-hud: failed to exec pixelkit color-picker: {err}");
+            std::process::exit(1);
+        }
+        "scanner" => {
+            let mut cmd = Command::new("pixelkit");
+            cmd.arg("code-scanner");
+            let err = cmd.exec();
+            eprintln!("snap-hud: failed to exec pixelkit code-scanner: {err}");
+            std::process::exit(1);
+        }
+        _ => {
+            let capture_bin = std::env::var("HOME")
+                .map(|h| format!("{h}/.local/bin/snap-capture"))
+                .unwrap_or_else(|_| "snap-capture".to_string());
 
-    let mut cmd = Command::new(&capture_bin);
-    cmd.arg(mode);
-    if pretty {
-        cmd.arg("--pretty");
+            let mut cmd = Command::new(&capture_bin);
+            cmd.arg(mode);
+            if pretty {
+                cmd.arg("--pretty");
+            }
+            let err = cmd.exec();
+            eprintln!("snap-hud: failed to exec {capture_bin}: {err}");
+            std::process::exit(1);
+        }
     }
-    let err = cmd.exec();
-    eprintln!("snap-hud: failed to exec {capture_bin}: {err}");
-    std::process::exit(1);
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{MODES, mode_from_key};
+    use super::{ALL_MODES, SCREENSHOT_MODES, mode_from_key, modes_for};
     use gtk4::gdk::Key;
 
     #[test]
     fn modes_list_contains_expected_definitions() {
-        assert_eq!(MODES.len(), 3);
-        assert_eq!(MODES[0].id, "area");
-        assert_eq!(MODES[1].id, "window");
-        assert_eq!(MODES[2].id, "screen");
+        assert_eq!(SCREENSHOT_MODES.len(), 3);
+        assert_eq!(SCREENSHOT_MODES[0].id, "area");
+        assert_eq!(SCREENSHOT_MODES[1].id, "window");
+        assert_eq!(SCREENSHOT_MODES[2].id, "screen");
+
+        assert_eq!(ALL_MODES.len(), 6);
+        assert_eq!(ALL_MODES[0].id, "area");
+        assert_eq!(ALL_MODES[1].id, "window");
+        assert_eq!(ALL_MODES[2].id, "screen");
+        assert_eq!(ALL_MODES[3].id, "ruler");
+        assert_eq!(ALL_MODES[4].id, "picker");
+        assert_eq!(ALL_MODES[5].id, "scanner");
+
+        assert_eq!(modes_for(true).len(), 3);
+        assert_eq!(modes_for(false).len(), 6);
     }
 
     #[test]
     fn maps_keys_to_modes_including_cyrillic() {
         // Area shortcuts
-        assert_eq!(mode_from_key(Key::_1), Some(Some("area")));
-        assert_eq!(mode_from_key(Key::a), Some(Some("area")));
-        assert_eq!(mode_from_key(Key::Cyrillic_ef), Some(Some("area")));
+        assert_eq!(mode_from_key(Key::_1, false), Some(Some("area")));
+        assert_eq!(mode_from_key(Key::a, false), Some(Some("area")));
+        assert_eq!(mode_from_key(Key::Cyrillic_ef, false), Some(Some("area")));
 
         // Window shortcuts
-        assert_eq!(mode_from_key(Key::_2), Some(Some("window")));
-        assert_eq!(mode_from_key(Key::w), Some(Some("window")));
-        assert_eq!(mode_from_key(Key::Cyrillic_tse), Some(Some("window")));
+        assert_eq!(mode_from_key(Key::_2, false), Some(Some("window")));
+        assert_eq!(mode_from_key(Key::w, false), Some(Some("window")));
+        assert_eq!(mode_from_key(Key::Cyrillic_tse, false), Some(Some("window")));
 
         // Screen shortcuts
-        assert_eq!(mode_from_key(Key::_3), Some(Some("screen")));
-        assert_eq!(mode_from_key(Key::s), Some(Some("screen")));
-        assert_eq!(mode_from_key(Key::Cyrillic_yeru), Some(Some("screen")));
+        assert_eq!(mode_from_key(Key::_3, false), Some(Some("screen")));
+        assert_eq!(mode_from_key(Key::s, false), Some(Some("screen")));
+        assert_eq!(mode_from_key(Key::Cyrillic_yeru, false), Some(Some("screen")));
+
+        // Ruler shortcuts (only in non-pretty mode)
+        assert_eq!(mode_from_key(Key::_4, false), Some(Some("ruler")));
+        assert_eq!(mode_from_key(Key::r, false), Some(Some("ruler")));
+        assert_eq!(mode_from_key(Key::Cyrillic_er, false), Some(Some("ruler")));
+        assert_eq!(mode_from_key(Key::_4, true), None);
+
+        // Picker shortcuts (only in non-pretty mode)
+        assert_eq!(mode_from_key(Key::_5, false), Some(Some("picker")));
+        assert_eq!(mode_from_key(Key::c, false), Some(Some("picker")));
+        assert_eq!(mode_from_key(Key::p, false), Some(Some("picker")));
+        assert_eq!(mode_from_key(Key::Cyrillic_es, false), Some(Some("picker")));
+        assert_eq!(mode_from_key(Key::_5, true), None);
+
+        // Scanner shortcuts (only in non-pretty mode)
+        assert_eq!(mode_from_key(Key::_6, false), Some(Some("scanner")));
+        assert_eq!(mode_from_key(Key::b, false), Some(Some("scanner")));
+        assert_eq!(mode_from_key(Key::x, false), Some(Some("scanner")));
+        assert_eq!(mode_from_key(Key::Cyrillic_be, false), Some(Some("scanner")));
+        assert_eq!(mode_from_key(Key::_6, true), None);
 
         // Exit shortcuts
-        assert_eq!(mode_from_key(Key::Escape), Some(None));
-        assert_eq!(mode_from_key(Key::q), Some(None));
-        assert_eq!(mode_from_key(Key::Cyrillic_shorti), Some(None));
+        assert_eq!(mode_from_key(Key::Escape, false), Some(None));
+        assert_eq!(mode_from_key(Key::q, false), Some(None));
+        assert_eq!(mode_from_key(Key::Cyrillic_shorti, false), Some(None));
 
         // Unbound key
-        assert_eq!(mode_from_key(Key::z), None);
+        assert_eq!(mode_from_key(Key::z, false), None);
     }
 }
